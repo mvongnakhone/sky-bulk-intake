@@ -4,6 +4,7 @@ import { suggestFieldMapping } from "../utils/suggestFieldMapping";
 
 import FieldMapper from "./FieldMapper";
 import ValidationResults from "./ValidationResults";
+import Form2290Preview from "./Form2290Preview";
 
 import { normalizeVehicles } from "../utils/normalizeVehicles";
 import { validateVehicles } from "../utils/validateVehicles";
@@ -12,6 +13,7 @@ import {
   type FieldMapping,
   type FleetRow,
   type SkyField,
+  type VehicleRecord,
 } from "../types/fleet";
 
 function CsvUploader() {
@@ -27,6 +29,12 @@ function CsvUploader() {
   const [mapping, setMapping] =
     useState<FieldMapping>({});
 
+  const [showFormPreview, setShowFormPreview] =
+    useState(false);
+
+  const [editedVehicles, setEditedVehicles] =
+    useState<VehicleRecord[]>([]);
+
   const handleFileSelect = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -35,6 +43,7 @@ function CsvUploader() {
     if (!file) return;
 
     setSelectedFile(file);
+    setShowFormPreview(false);
   };
 
   const handleImport = () => {
@@ -78,6 +87,8 @@ function CsvUploader() {
 
       [sourceColumn]: targetField,
     }));
+
+    setShowFormPreview(false);
   };
 
   const normalizedVehicles =
@@ -85,6 +96,12 @@ function CsvUploader() {
 
   const validatedVehicles =
     validateVehicles(normalizedVehicles);
+
+  const allVehiclesValid =
+    validatedVehicles.length > 0 &&
+    validatedVehicles.every(
+      (vehicle) => vehicle.isValid
+    );
 
   return (
     <div>
@@ -157,6 +174,27 @@ function CsvUploader() {
           <ValidationResults
             vehicles={validatedVehicles}
           />
+
+          <button
+            onClick={() => setShowFormPreview(true)}
+            disabled={!allVehiclesValid}
+          >
+            Generate Form 2290 Preview
+          </button>
+
+          {!allVehiclesValid &&
+            validatedVehicles.length > 0 && (
+              <p>
+                Resolve all validation issues before generating
+                the Form 2290 request.
+              </p>
+            )}
+
+          {showFormPreview && allVehiclesValid && (
+            <Form2290Preview
+              vehicles={validatedVehicles}
+            />
+          )}
         </>
       )}
     </div>
