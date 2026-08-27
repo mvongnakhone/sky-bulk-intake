@@ -6,6 +6,7 @@ import FieldMapper from "./FieldMapper";
 import ValidationResults from "./ValidationResults";
 import Form2290Preview from "./Form2290Preview";
 import VehicleEditor from "./VehicleEditor";
+import StepIndicator from "./StepIndicator";
 
 import { normalizeVehicles } from "../utils/normalizeVehicles";
 import { validateVehicles } from "../utils/validateVehicles";
@@ -30,11 +31,11 @@ function CsvUploader() {
   const [mapping, setMapping] =
     useState<FieldMapping>({});
 
-  const [showFormPreview, setShowFormPreview] =
-    useState(false);
-
   const [editedVehicles, setEditedVehicles] =
     useState<VehicleRecord[]>([]);
+
+  const [currentStep, setCurrentStep] =
+    useState(1);
 
   const handleFileSelect = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -44,7 +45,6 @@ function CsvUploader() {
     if (!file) return;
 
     setSelectedFile(file);
-    setShowFormPreview(false);
   };
 
   const handleImport = () => {
@@ -64,17 +64,21 @@ function CsvUploader() {
         const initialMapping: FieldMapping = {};
 
         parsedHeaders.forEach((header) => {
-          initialMapping[header] = suggestFieldMapping(header);
+          initialMapping[header] =
+            suggestFieldMapping(header);
         });
 
         setMapping(initialMapping);
 
-        const mappedVehicles = normalizeVehicles(
-          results.data,
-          initialMapping
-        );
+        const mappedVehicles =
+          normalizeVehicles(
+            results.data,
+            initialMapping
+          );
 
         setEditedVehicles(mappedVehicles);
+
+        setCurrentStep(2);
       },
 
       error: (error) => {
@@ -101,8 +105,6 @@ function CsvUploader() {
       normalizeVehicles(rows, updatedMapping);
 
     setEditedVehicles(updatedVehicles);
-
-    setShowFormPreview(false);
   };
 
   const handleVehicleChange = (
@@ -127,8 +129,6 @@ function CsvUploader() {
 
       return updatedVehicles;
     });
-
-    setShowFormPreview(false);
   };
 
   const validatedVehicles =
@@ -140,65 +140,62 @@ function CsvUploader() {
       (vehicle) => vehicle.isValid
     );
 
+  const requiredFields: SkyField[] = [
+    "unitNumber",
+    "vin",
+    "taxableGrossWeight",
+  ];
+
+  const mappedFields = Object.values(mapping);
+
+  const allRequiredFieldsMapped =
+    requiredFields.every((field) =>
+      mappedFields.includes(field)
+    );
+
   return (
     <div>
-      <h2>Upload Fleet Data</h2>
+      <StepIndicator currentStep={currentStep} />
 
-      <p>
-        Select a CSV file containing your vehicle
-        records.
-      </p>
+      {currentStep === 1 && (
+        <section className="card">
+          <h2>Upload Fleet Data</h2>
 
-      <input
-        type="file"
-        accept=".csv,text/csv"
-        onChange={handleFileSelect}
-      />
+          <p>
+            Upload a CSV containing the vehicles
+            you want to include in your Form 2290
+            request.
+          </p>
 
-      <button
-        onClick={handleImport}
-        disabled={!selectedFile}
-      >
-        Import Data
-      </button>
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleFileSelect}
+          />
 
-      {rows.length > 0 && (
-        <>
-          <div>
-            <h3>Imported Fleet Data</h3>
+          <button
+            onClick={handleImport}
+            disabled={!selectedFile}
+          >
+            Import Data
+          </button>
+        </section>
+      )}
 
-            <p>
-              {rows.length} records imported
-            </p>
+      {currentStep === 2 && (
+        <section className="card">
+          <h2>Map Fleet Fields</h2>
 
-            <table>
-              <thead>
-                <tr>
-                  {headers.map((header) => (
-                    <th key={header}>
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+          <p>
+            Confirm how your spreadsheet columns
+            correspond to the required Form 2290
+            fields.
+          </p>
 
-              <tbody>
-                {rows.map(
-                  (row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      {headers.map(
-                        (header) => (
-                          <td key={header}>
-                            {row[header]}
-                          </td>
-                        )
-                      )}
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
+          <p>
+            <strong>{rows.length}</strong>{" "}
+            vehicles detected
+          </p>
 
           <FieldMapper
             headers={headers}
@@ -208,36 +205,92 @@ function CsvUploader() {
             }
           />
 
+          {!allRequiredFieldsMapped && (
+            <p className="warning">
+              Map Unit #, VIN, and Taxable Gross
+              Weight before continuing.
+            </p>
+          )}
+
+          <div className="button-row">
+            <button
+              className="secondary-button"
+              onClick={() => setCurrentStep(1)}
+            >
+              Back
+            </button>
+
+            <button
+              disabled={!allRequiredFieldsMapped}
+              onClick={() => setCurrentStep(3)}
+            >
+              Continue to Review
+            </button>
+          </div>
+        </section>
+      )}
+
+      {currentStep === 3 && (
+        <section className="card">
+          <h2>Review Vehicle Data</h2>
+
+          <p>
+            Review imported records and resolve
+            any issues before generating the
+            Form 2290 request.
+          </p>
+
           <VehicleEditor
             vehicles={editedVehicles}
-            onVehicleChange={handleVehicleChange}
+            onVehicleChange={
+              handleVehicleChange
+            }
           />
 
           <ValidationResults
             vehicles={validatedVehicles}
           />
 
-          <button
-            onClick={() => setShowFormPreview(true)}
-            disabled={!allVehiclesValid}
-          >
-            Generate Form 2290 Preview
-          </button>
-
-          {!allVehiclesValid &&
-            validatedVehicles.length > 0 && (
-              <p>
-                Resolve all validation issues before generating
-                the Form 2290 request.
-              </p>
-            )}
-
-          {showFormPreview && allVehiclesValid && (
-            <Form2290Preview
-              vehicles={validatedVehicles}
-            />
+          {!allVehiclesValid && (
+            <p className="warning">
+              Resolve all validation issues
+              before continuing.
+            </p>
           )}
-        </>
+
+          <div className="button-row">
+            <button
+              className="secondary-button"
+              onClick={() => setCurrentStep(2)}
+            >
+              Back
+            </button>
+
+            <button
+              disabled={!allVehiclesValid}
+              onClick={() => setCurrentStep(4)}
+            >
+              Generate Form 2290
+            </button>
+          </div>
+        </section>
+      )}
+
+      {currentStep === 4 && (
+        <section className="card">
+          <Form2290Preview
+            vehicles={validatedVehicles}
+          />
+
+          <div className="button-row">
+            <button
+              className="secondary-button"
+              onClick={() => setCurrentStep(3)}
+            >
+              Back to Review
+            </button>
+          </div>
+        </section>
       )}
     </div>
   );
