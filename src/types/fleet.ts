@@ -24,3 +24,28 @@ export const SKY_FIELDS: {
     label: "Taxable Gross Weight",
   },
 ];
+
+export type VehicleRecord = {
+  unitNumber: string;
+  vin: string;
+  taxableGrossWeight: number;
+};
+
+export type WeightCategory = {
+  code: string;
+  label: string;
+  price: number;
+};
+
+export type ValidationIssue = {
+  field: keyof VehicleRecord;
+  message: string;
+};
+
+export type ValidatedVehicle = {
+  rowNumber: number;
+  vehicle: VehicleRecord;
+  weightCategory: WeightCategory | null;
+  issues: ValidationIssue[];
+  isValid: boolean;
+};

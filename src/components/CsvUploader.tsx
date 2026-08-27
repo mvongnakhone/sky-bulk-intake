@@ -3,6 +3,10 @@ import Papa from "papaparse";
 import { suggestFieldMapping } from "../utils/suggestFieldMapping";
 
 import FieldMapper from "./FieldMapper";
+import ValidationResults from "./ValidationResults";
+
+import { normalizeVehicles } from "../utils/normalizeVehicles";
+import { validateVehicles } from "../utils/validateVehicles";
 
 import {
   type FieldMapping,
@@ -76,6 +80,12 @@ function CsvUploader() {
     }));
   };
 
+  const normalizedVehicles =
+    normalizeVehicles(rows, mapping);
+
+  const validatedVehicles =
+    validateVehicles(normalizedVehicles);
+
   return (
     <div>
       <h2>Upload Fleet Data</h2>
@@ -142,6 +152,10 @@ function CsvUploader() {
             onMappingChange={
               handleMappingChange
             }
+          />
+
+          <ValidationResults
+            vehicles={validatedVehicles}
           />
         </>
       )}
