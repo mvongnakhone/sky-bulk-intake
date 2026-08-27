@@ -5,6 +5,7 @@ import { suggestFieldMapping } from "../utils/suggestFieldMapping";
 import FieldMapper from "./FieldMapper";
 import ValidationResults from "./ValidationResults";
 import Form2290Preview from "./Form2290Preview";
+import VehicleEditor from "./VehicleEditor";
 
 import { normalizeVehicles } from "../utils/normalizeVehicles";
 import { validateVehicles } from "../utils/validateVehicles";
@@ -67,6 +68,13 @@ function CsvUploader() {
         });
 
         setMapping(initialMapping);
+
+        const mappedVehicles = normalizeVehicles(
+          results.data,
+          initialMapping
+        );
+
+        setEditedVehicles(mappedVehicles);
       },
 
       error: (error) => {
@@ -82,20 +90,49 @@ function CsvUploader() {
     sourceColumn: string,
     targetField: SkyField | ""
   ) => {
-    setMapping((previousMapping) => ({
-      ...previousMapping,
-
+    const updatedMapping = {
+      ...mapping,
       [sourceColumn]: targetField,
-    }));
+    };
+
+    setMapping(updatedMapping);
+
+    const updatedVehicles =
+      normalizeVehicles(rows, updatedMapping);
+
+    setEditedVehicles(updatedVehicles);
 
     setShowFormPreview(false);
   };
 
-  const normalizedVehicles =
-    normalizeVehicles(rows, mapping);
+  const handleVehicleChange = (
+    index: number,
+    field: keyof VehicleRecord,
+    value: string
+  ) => {
+    setEditedVehicles((previousVehicles) => {
+      const updatedVehicles = [...previousVehicles];
+
+      const vehicle = {
+        ...updatedVehicles[index],
+      };
+
+      if (field === "taxableGrossWeight") {
+        vehicle.taxableGrossWeight = Number(value);
+      } else {
+        vehicle[field] = value;
+      }
+
+      updatedVehicles[index] = vehicle;
+
+      return updatedVehicles;
+    });
+
+    setShowFormPreview(false);
+  };
 
   const validatedVehicles =
-    validateVehicles(normalizedVehicles);
+    validateVehicles(editedVehicles);
 
   const allVehiclesValid =
     validatedVehicles.length > 0 &&
@@ -169,6 +206,11 @@ function CsvUploader() {
             onMappingChange={
               handleMappingChange
             }
+          />
+
+          <VehicleEditor
+            vehicles={editedVehicles}
+            onVehicleChange={handleVehicleChange}
           />
 
           <ValidationResults
