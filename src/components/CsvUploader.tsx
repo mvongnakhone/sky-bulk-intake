@@ -1,12 +1,26 @@
 import { useState } from "react";
 import Papa from "papaparse";
 
-type FleetRow = Record<string, string>;
+import FieldMapper from "./FieldMapper";
+
+import {
+  type FieldMapping,
+  type FleetRow,
+  type SkyField,
+} from "../types/fleet";
 
 function CsvUploader() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [rows, setRows] = useState<FleetRow[]>([]);
-  const [headers, setHeaders] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] =
+    useState<File | null>(null);
+
+  const [rows, setRows] =
+    useState<FleetRow[]>([]);
+
+  const [headers, setHeaders] =
+    useState<string[]>([]);
+
+  const [mapping, setMapping] =
+    useState<FieldMapping>({});
 
   const handleFileSelect = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -26,24 +40,49 @@ function CsvUploader() {
       skipEmptyLines: true,
 
       complete: (results) => {
-        console.log("Parsed rows:", results.data);
-        console.log("Headers:", results.meta.fields);
+        const parsedHeaders =
+          results.meta.fields ?? [];
 
         setRows(results.data);
-        setHeaders(results.meta.fields ?? []);
+        setHeaders(parsedHeaders);
+
+        const initialMapping: FieldMapping = {};
+
+        parsedHeaders.forEach((header) => {
+          initialMapping[header] = "";
+        });
+
+        setMapping(initialMapping);
       },
 
       error: (error) => {
-        console.error("CSV parsing failed:", error);
+        console.error(
+          "CSV parsing failed:",
+          error
+        );
       },
     });
+  };
+
+  const handleMappingChange = (
+    sourceColumn: string,
+    targetField: SkyField | ""
+  ) => {
+    setMapping((previousMapping) => ({
+      ...previousMapping,
+
+      [sourceColumn]: targetField,
+    }));
   };
 
   return (
     <div>
       <h2>Upload Fleet Data</h2>
 
-      <p>Select a CSV file containing your vehicle records.</p>
+      <p>
+        Select a CSV file containing your vehicle
+        records.
+      </p>
 
       <input
         type="file"
@@ -59,33 +98,51 @@ function CsvUploader() {
       </button>
 
       {rows.length > 0 && (
-        <div>
-          <h3>Imported Fleet Data</h3>
+        <>
+          <div>
+            <h3>Imported Fleet Data</h3>
 
-          <p>{rows.length} records imported</p>
+            <p>
+              {rows.length} records imported
+            </p>
 
-          <table>
-            <thead>
-              <tr>
-                {headers.map((header) => (
-                  <th key={header}>{header}</th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {rows.map((row, rowIndex) => (
-                <tr key={rowIndex}>
+            <table>
+              <thead>
+                <tr>
                   {headers.map((header) => (
-                    <td key={header}>
-                      {row[header]}
-                    </td>
+                    <th key={header}>
+                      {header}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody>
+                {rows.map(
+                  (row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {headers.map(
+                        (header) => (
+                          <td key={header}>
+                            {row[header]}
+                          </td>
+                        )
+                      )}
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <FieldMapper
+            headers={headers}
+            mapping={mapping}
+            onMappingChange={
+              handleMappingChange
+            }
+          />
+        </>
       )}
     </div>
   );
