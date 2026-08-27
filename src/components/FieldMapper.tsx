@@ -41,7 +41,7 @@ function FieldMapper({
                 )
               }
             >
-              <option value="">Select a field</option>
+              <option value="">Ignore this column</option>
 
               {SKY_FIELDS.map((field) => (
                 <option

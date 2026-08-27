@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Papa from "papaparse";
+import { suggestFieldMapping } from "../utils/suggestFieldMapping";
 
 import FieldMapper from "./FieldMapper";
 
@@ -49,7 +50,7 @@ function CsvUploader() {
         const initialMapping: FieldMapping = {};
 
         parsedHeaders.forEach((header) => {
-          initialMapping[header] = "";
+          initialMapping[header] = suggestFieldMapping(header);
         });
 
         setMapping(initialMapping);
